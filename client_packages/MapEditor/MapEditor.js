@@ -5,6 +5,14 @@
 //some objects are duped, need to clean up list later
 //50k objects including map sections
 
+
+//TODOS (temp)
+//Add rotational mouse movement detection to rotation axis
+//Add 2D graphic to rotation axis so they can be seen through the map/objects like the movement axis
+//Add an object hash fetcher (Must work on any object, not just ragemp objects)
+//Add a dupe button to change focus object to highlighted object
+
+//Bugged out as of 0.3.5
 mp.events.add("entityStreamIn", (entity) => 
 {
     if(entity.type === "object")
@@ -17,12 +25,19 @@ mp.events.add("entityStreamIn", (entity) =>
     }
 });
 
+//Called back from the server with data when player calls /medit
 mp.events.add("MapEditor_EditMap", (data) =>
 {
     let objs = JSON.parse(data);
     for(var i = 0; i < editorObjects.length; i++)
     {
-        editorObjects[i].destroy();
+        if(editorObjects[i] != null)
+        {
+            if(mp.objects.exists(editorObjects[i]))
+            {
+                editorObjects[i].destroy();
+            }
+        }
     }
 
     editorObjects = [];
@@ -45,6 +60,7 @@ mp.events.add("MapEditor_EditMap", (data) =>
     }
 });
 
+//Called back to players when someone uses /mload
 mp.events.add("MapEditor_SetColl", (entityID, coll) =>
 {
     let entity = mp.objects.at(entityID);
@@ -56,6 +72,7 @@ mp.events.add("MapEditor_SetColl", (entityID, coll) =>
     }
 });
 
+//Global variables
 let editorStart = false;
 let editorState = 0; //0 = select mode, 1 = placement mode, 2 = adjustement mode
 
@@ -236,6 +253,15 @@ function GetCrossProduct(v1, v2)
 	return vector;
 }
 
+function ObjectNotNull(obj)
+{
+    if(obj == null)
+        return false;
+    if(!mp.objects.exists(obj))
+        return false;
+    return true;
+}
+
 function ClampValue(number, min, max)
 {
     return number <= min ? min : number >= max ? max : number;
@@ -318,12 +344,7 @@ function GetCenterPointOfVectors(...vecs)
 
 function CreateMovMarkerObjs()
 {
-    if(editorXMovMarkerObj != null)
-        editorXMovMarkerObj.destroy();
-    if(editorYMovMarkerObj != null)
-        editorYMovMarkerObj.destroy();
-    if(editorZMovMarkerObj != null)
-        editorZMovMarkerObj.destroy();
+    DestroyMovMarkerObjs();
 
     editorXMovMarkerObj = mp.objects.new(1574107526, mp.players.local.position, new mp.Vector3(), 255, 0);
 	editorYMovMarkerObj = mp.objects.new(1574107526, mp.players.local.position, new mp.Vector3(), 255, 0);
@@ -352,11 +373,26 @@ function CreateMovMarkerObjs()
 function DestroyMovMarkerObjs()
 {
     if(editorXMovMarkerObj != null)
-    editorXMovMarkerObj.destroy();
+    {
+        if(mp.objects.exists(editorXMovMarkerObj))
+        {
+            editorXMovMarkerObj.destroy();
+        }
+    }
     if(editorYMovMarkerObj != null)
-        editorYMovMarkerObj.destroy();
+    {
+        if(mp.objects.exists(editorYMovMarkerObj))
+        {
+            editorYMovMarkerObj.destroy();
+        }
+    }
     if(editorZMovMarkerObj != null)
-        editorZMovMarkerObj.destroy();
+    {
+        if(mp.objects.exists(editorZMovMarkerObj))
+        {
+            editorZMovMarkerObj.destroy();
+        }
+    }
 
     editorXMovMarkerObj = null;
     editorYMovMarkerObj = null;
@@ -365,7 +401,7 @@ function DestroyMovMarkerObjs()
 
 function ToggleAxisMarkerObjColl(toggle)
 {
-    if(editorXAxisMarkerObj != null && editorYAxisMarkerObj != null && editorZAxisMarkerObj != null)
+    if(ObjectNotNull(editorXAxisMarkerObj) && ObjectNotNull(editorYAxisMarkerObj) && ObjectNotNull(editorZAxisMarkerObj))
     {
         editorXAxisMarkerObj.setCollision(toggle, false);
         editorYAxisMarkerObj.setCollision(toggle, false);
@@ -378,7 +414,7 @@ function ToggleAxisMarkerObjColl(toggle)
 
 function ToggleMovMarkerObjColl(toggle)
 {
-    if(editorXMovMarkerObj != null && editorYMovMarkerObj != null && editorZMovMarkerObj != null)
+    if(ObjectNotNull(editorXMovMarkerObj) && ObjectNotNull(editorYMovMarkerObj) && ObjectNotNull(editorZMovMarkerObj))
     {
         editorXMovMarkerObj.setCollision(toggle, false);
         editorYMovMarkerObj.setCollision(toggle, false);
@@ -392,12 +428,7 @@ function ToggleMovMarkerObjColl(toggle)
 
 function CreateAxisMarkerObjs()
 {
-    if(editorXAxisMarkerObj != null)
-        editorXAxisMarkerObj.destroy();
-    if(editorYAxisMarkerObj != null)
-        editorYAxisMarkerObj.destroy();
-    if(editorZAxisMarkerObj != null)
-        editorZAxisMarkerObj.destroy();
+    DestroyAxisMarkerObjs();
 
     editorXAxisMarkerObj = mp.objects.new(-263709501, mp.players.local.position, new mp.Vector3(), 255, 0);
 	editorYAxisMarkerObj = mp.objects.new(-263709501, mp.players.local.position, new mp.Vector3(0, 90, 0), 255, 0);
@@ -428,11 +459,11 @@ function CreateAxisMarkerObjs()
 
 function DestroyAxisMarkerObjs()
 {
-    if(editorXAxisMarkerObj != null)
+    if(ObjectNotNull(editorXAxisMarkerObj))
         editorXAxisMarkerObj.destroy();
-    if(editorYAxisMarkerObj != null)
+    if(ObjectNotNull(editorYAxisMarkerObj))
         editorYAxisMarkerObj.destroy();
-    if(editorZAxisMarkerObj != null)
+    if(ObjectNotNull(editorZAxisMarkerObj))
         editorZAxisMarkerObj.destroy();
 
     editorXAxisMarkerObj = null;
@@ -442,8 +473,7 @@ function DestroyAxisMarkerObjs()
 
 function CreateFocusObject()
 {
-    if(editorFocusObject != null)
-        editorFocusObject.destroy();
+    DestroyFocusObject();
 
     let oldIndex = IndexMem;
     while(!mp.game.streaming.isModelInCdimage(mp.game.joaat(objData[IndexMem])) || !mp.game.streaming.isModelValid(mp.game.joaat(objData[IndexMem])))
@@ -476,7 +506,10 @@ function CreateFocusObject()
 function DestroyFocusObject()
 {
     if(editorFocusObject != null)
-        editorFocusObject.destroy();
+    {
+        if(mp.objects.exists(editorFocusObject))
+            editorFocusObject.destroy();
+    }
     editorFocusObject = null;
 }
 
@@ -522,7 +555,7 @@ function StartMapEditor()
         let i = 0;
         for(i = 0; i < editorObjects.length; i++)
         {
-            if(editorObjects[i] != null)
+            if(ObjectNotNull(editorObjects[i]))
             {
                 let pos = editorObjects[i].getCoords(true);
                 let rot = editorObjects[i].getRotation(2);
@@ -634,7 +667,7 @@ mp.events.add("playerCommand", (command) =>
             let i = 0;
             for(i = 0; i < editorObjects.length; i++)
             {
-                if(editorObjects[i] != null)
+                if(ObjectNotNull(editorObjects[i]))
                 {
                     let pos = editorObjects[i].getCoords(true);
                     let rot = editorObjects[i].getRotation(2);
@@ -652,7 +685,7 @@ mp.events.add("playerCommand", (command) =>
         let i = 0;
         for(i = 0; i < editorObjects.length; i++)
         {
-            if(editorObjects[i] != null)
+            if(ObjectNotNull(editorObjects[i]))
             {
                 editorObjects[i].destroy();
             }
@@ -670,7 +703,7 @@ mp.events.add("playerCommand", (command) =>
         let i = 0;
         for(i = 0; i < editorObjects.length; i++)
         {
-            if(editorObjects[i] != null)
+            if(ObjectNotNull(editorObjects[i]))
             {
                 editorObjects[i].destroy();
             }
@@ -717,7 +750,7 @@ mp.events.add("playerCommand", (command) =>
         let i = 0;
         for(i = 0; i < editorObjects.length; i++)
         {
-            if(editorObjects[i] != null)
+            if(ObjectNotNull(editorObjects[i]))
             {
                 editorObjects[i].destroy();
             }
@@ -736,7 +769,7 @@ mp.events.add("playerCommand", (command) =>
         let i = 0;
         for(i = 0; i < editorObjects.length; i++)
         {
-            if(editorObjects[i] != null)
+            if(ObjectNotNull(editorObjects[i]))
             {
                 editorObjects[i].destroy();
             }
@@ -787,7 +820,7 @@ mp.keys.bind(f3Key, false, function()
 
     DestroyAxisMarkerObjs();
     DestroyMovMarkerObjs();
-    if(editorFocusObject != null)
+    if(ObjectNotNull(editorFocusObject))
     {
         if(!IsObjectSpawned(editorFocusObject))
         {
@@ -943,7 +976,7 @@ mp.keys.bind(cKey, false, function()
     if(chat)
         return;
     editorFocusObjectCollision = !editorFocusObjectCollision;
-    if(editorFocusObject != null)
+    if(ObjectNotNull(editorFocusObject))
     {
         editorFocusObject.cmapcoll = !!editorFocusObjectCollision;
     }
@@ -1515,7 +1548,8 @@ mp.events.add("render", () =>
             }
             else
             {
-                if(editorFocusObject != null)
+                //Needs clean up
+                if(ObjectNotNull(editorFocusObject))
 				{
 					let rightAxisX = mp.game.controls.getDisabledControlNormal(0, 220);
 					let rightAxisY = mp.game.controls.getDisabledControlNormal(0, 221);
@@ -1538,6 +1572,9 @@ mp.events.add("render", () =>
 					}
 					else if(editorXMovActive)
 					{
+                        //Find the angle between the mouse movement vector(center of object[3D to 2D] to mouse coords) and the axis vector(center of object[3D to 2D] to center of axis object[3D to 2D])
+                        //If angle is less than 90 degrees, move towards the axis object at a gradual speed
+                        //If the angle is greater than 90, move away from the axis object at a gradual speed
 						let objp = editorFocusObject.getOffsetFromInWorldCoords(0, 0, 3);
                         let objr = mp.game.graphics.world3dToScreen2d(objp.x, objp.y, objp.z);
                         let curPos = editorFocusObject.getCoords(true);
@@ -1645,7 +1682,7 @@ mp.events.add("render", () =>
                     {
                         DestroyAxisMarkerObjs();
                         DestroyMovMarkerObjs();
-                        if(editorFocusObject != null)
+                        if(ObjectNotNull(editorFocusObject))
                         {
                             if(!IsObjectSpawned(editorFocusObject))
                             {
@@ -1667,21 +1704,19 @@ mp.events.add("render", () =>
             }
         }
 
-        if(editorXMovMarkerObj != null && editorYMovMarkerObj != null && editorZMovMarkerObj != null)
+        //Needs cleanup
+        if(ObjectNotNull(editorXMovMarkerObj) && ObjectNotNull(editorYMovMarkerObj) && ObjectNotNull(editorZMovMarkerObj))
         {
             let dist = GetDistanceBetweenTwoVectors(editorFocusObject.getCoords(true), editorCamera.getCoord());
-            let ass = mp.game.graphics.getScreenAspectRatio(true);
             let res = mp.game.graphics.getScreenResolution(0, 0);
             let yy = res.y;
             let xx = res.x;
 
             yy /= xx;
             xx = 1;
-            
-            dist /= 12;
 
-            xx /= 35 * dist;
-            yy /= 10 * dist;
+            xx /= 35 * (dist / 12);
+            yy /= 10 * (dist / 12);
             
             let cordPos1 = editorXMovMarkerObj.getCoords(true);
             let cordPos2 = editorYMovMarkerObj.getCoords(true);
@@ -1698,7 +1733,7 @@ mp.events.add("render", () =>
                 mp.game.graphics.drawRect(axis3.x, axis3.y, xx, yy * (xx / (xx - yy)), editorZMovColor[0], editorZMovColor[1], editorZMovColor[2], 255);
         }
 
-        if(editorFocusObject != null)
+        if(ObjectNotNull(editorFocusObject))
         {
             let offsetMain = editorFocusObject.getCoords(true);
             let offsetX = editorFocusObject.getOffsetFromInWorldCoords(0, 0, 3);
@@ -1734,25 +1769,21 @@ mp.events.add("render", () =>
                 editorZMovColor[0], editorZMovColor[1], editorZMovColor[2], editorZMovColor[3],
                 false, false, 0, false, "", "", false);
 
-            if(editorXAxisMarkerObj != null && editorYAxisMarkerObj != null && editorZAxisMarkerObj != null)
+            if(ObjectNotNull(editorXAxisMarkerObj) && ObjectNotNull(editorYAxisMarkerObj) && ObjectNotNull(editorZAxisMarkerObj))
             {
                 editorXAxisMarkerObj.setRotation(0, 0, AxisMem, 2, true);
                 editorYAxisMarkerObj.setRotation(90, 0, AxisMem, 2, true);
                 editorZAxisMarkerObj.setRotation(0, 90, AxisMem, 2, true);
+                editorXAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
+                editorYAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
+                editorZAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
             }
     
-            if(editorXMovMarkerObj != null && editorYMovMarkerObj != null && editorZMovMarkerObj != null)
+            if(ObjectNotNull(editorXMovMarkerObj) && ObjectNotNull(editorYMovMarkerObj) && ObjectNotNull(editorZMovMarkerObj))
             {
                 editorXMovMarkerObj.setCoordsNoOffset(offsetX.x, offsetX.y, offsetX.z, false, false, false);
                 editorYMovMarkerObj.setCoordsNoOffset(offsetY.x, offsetY.y, offsetY.z, false, false, false);
                 editorZMovMarkerObj.setCoordsNoOffset(offsetZ.x, offsetZ.y, offsetZ.z, false, false, false);
-            }
-            
-            if(editorXAxisMarkerObj != null && editorYAxisMarkerObj != null && editorZAxisMarkerObj != null)
-            {
-                editorXAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
-                editorYAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
-                editorZAxisMarkerObj.setCoordsNoOffset(offsetMain.x, offsetMain.y, offsetMain.z, false, false, false);
             }
         }
     }
