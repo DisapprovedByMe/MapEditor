@@ -69,7 +69,7 @@ mp.events.add("MapEditor_SetColl", (entityID, coll) =>
 });
 
 // Global variables
-let objData = require('./object_data.json').Objects;
+let objData = JSON.parse(require('./MapEditor/object_data.js')).Objects;
 
 let editorStart = false;
 let editorState = 0; //0 = select mode, 1 = placement mode, 2 = adjustement mode
