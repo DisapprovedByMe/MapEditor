@@ -1,4 +1,4 @@
-{
+exports = `{
     "Objects": [
         "stt_prop_corner_sign_02",
         "stt_prop_corner_sign_03",
@@ -24356,7 +24356,7 @@
         "sc1_00c_platform_det_02",
         "sc1_00c_platform_det_03",
         "sc1_00c_platform_skylight",
-        "sc1_00c_sc1`_00c_platform",
+        "sc1_00c_sc1_00c_platform",
         "sc1_00c_tacoshop",
         "sc1_00c_tramlines",
         "sc1_00c_tramtrck003",
@@ -55001,4 +55001,4 @@
         "w_sr_sniperrifle_mag1"
         
     ]
-}
+}`;
