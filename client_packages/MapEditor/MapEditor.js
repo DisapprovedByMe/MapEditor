@@ -493,6 +493,18 @@ function CreateFocusObject()
     }
 
     mp.game.streaming.requestModel(mp.game.joaat(objData[IndexMem]));
+    let i = 0;
+    for(i = 0; i < 10; i ++)
+    {
+        if(IndexMem + i < objData.length)
+        {
+            mp.game.streaming.requestModel(mp.game.joaat(objData[IndexMem + i]));
+        }
+        if(IndexMem - i >= 0)
+        {
+            mp.game.streaming.requestModel(mp.game.joaat(objData[IndexMem - i]));
+        }
+    }
     while(!mp.game.streaming.hasModelLoaded(mp.game.joaat(objData[IndexMem])))
     {
         PrepareClientView(); //flicker now u bastard
