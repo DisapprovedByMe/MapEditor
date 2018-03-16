@@ -1378,7 +1378,7 @@ mp.events.add("render", () =>
                     editorFocusObject.setCoordsNoOffset(curPos.x + trueOffset.x, curPos.y + trueOffset.y, curPos.z + trueOffset.z, false, false, false);
                     editorAxisMemoryPosition = editorFocusObject.getCoords(true);
                 }
-                if(mp.keys.isDown(rightKey))
+                if(mp.keys.isDown(bindKeys.KEY_RIGHT))
                 {
                     let curPos = editorFocusObject.getCoords(true);
                     let offsetX = editorFocusObject.getOffsetFromInWorldCoords(3, 0, 0);
@@ -1404,7 +1404,7 @@ mp.events.add("render", () =>
                     editorFocusObject.setCoordsNoOffset(curPos.x + trueOffset.x, curPos.y + trueOffset.y, curPos.z + trueOffset.z, false, false, false);
                     editorAxisMemoryPosition = editorFocusObject.getCoords(true);
                 }
-                if(mp.keys.isDown(upKey))
+                if(mp.keys.isDown(bindKeys.KEY_UP))
                 {
                     let curPos = editorFocusObject.getCoords(true);
                     let offsetX = editorFocusObject.getOffsetFromInWorldCoords(0, 3, 0);
