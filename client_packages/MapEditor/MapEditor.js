@@ -536,19 +536,25 @@ function CreateFocusObject(hash = null)
     }
     else
     {
-        mp.game.streaming.requestModel(hash);
-        while(!mp.game.streaming.hasModelLoaded(hash))
+        if(mp.game.streaming.isModelInCdimage(hash) && mp.game.streaming.isModelValid(hash))
         {
-            PrepareClientView(); //flicker now u bastard
-            mp.game.wait(0);
+            mp.game.streaming.requestModel(hash);
+            while(!mp.game.streaming.hasModelLoaded(hash))
+            {
+                PrepareClientView(); //flicker now u bastard
+                mp.game.wait(0);
+            }
+            editorFocusObject = mp.objects.new(hash, mp.players.local.position, new mp.Vector3(), 255, 0);
+            editorFocusObject.cmapcoll = true;
+            editorFocusObject.setLodDist(LODDist);
+            editorFocusObject.freezePosition(true);
+            editorFocusObject.setCollision(false, false);
+            mp.game.invoke('0x93271EC996EE94D2', editorFocusObject.handle, editorTransparencySelect, false);
         }
-
-        editorFocusObject = mp.objects.new(hash, mp.players.local.position, new mp.Vector3(), 255, 0);
-        editorFocusObject.cmapcoll = true;
-        editorFocusObject.setLodDist(LODDist);
-        editorFocusObject.freezePosition(true);
-        editorFocusObject.setCollision(false, false);
-        mp.game.invoke('0x93271EC996EE94D2', editorFocusObject.handle, editorTransparencySelect, false);
+        else
+        {
+            mp.gui.chat.push("Invalid Hash");
+        }
     }
 }
 
@@ -845,15 +851,56 @@ mp.events.add("playerCommand", (command) =>
 		}
 		else
 		{
-			if(!mp.game.streaming.isModelInCdimage(mp.game.joaat(args[0])) || !mp.game.streaming.isModelValid(mp.game.joaat(args[0])))
-			{
-				mp.gui.chat.push("Invalid object");
-			}
-			else
-			{
-                CreateFocusObject();
-                AxisMem = 0;
-			}
+            if(!isNaN(args[0]))
+            {
+                if(!mp.game.streaming.isModelInCdimage(parseInt(args[0])) || !mp.game.streaming.isModelValid(parseInt(args[0])))
+                {
+                    mp.gui.chat.push("Invalid object");
+                }
+                else
+                {
+                    CreateFocusObject(parseInt(args[0]));
+                    AxisMem = 0;
+                    if(memObj != null)
+                    {
+                        if(memObj.handle != null)
+                            mp.game.invoke('0x2087B43C7787E236', memObj.handle);
+                        else
+                            mp.game.invoke('0x2087B43C7787E236', memObj);
+                        memObj = null;
+                    }
+                    editorState = 1;
+                    editorDragMode = false;
+
+                    CreateAxisMarkerObjs();
+                    CreateMovMarkerObjs();
+                }
+            }
+            else
+            {
+                if(!mp.game.streaming.isModelInCdimage(mp.game.joaat(args[0])) || !mp.game.streaming.isModelValid(mp.game.joaat(args[0])))
+                {
+                    mp.gui.chat.push("Invalid object");
+                }
+                else
+                {
+                    CreateFocusObject(mp.game.joaat(args[0]));
+                    AxisMem = 0;
+                    if(memObj != null)
+                    {
+                        if(memObj.handle != null)
+                            mp.game.invoke('0x2087B43C7787E236', memObj.handle);
+                        else
+                            mp.game.invoke('0x2087B43C7787E236', memObj);
+                        memObj = null;
+                    }
+                    editorState = 1;
+                    editorDragMode = false;
+
+                    CreateAxisMarkerObjs();
+                    CreateMovMarkerObjs();
+                }
+            }
 		}
 	}
 });
@@ -893,6 +940,16 @@ mp.keys.bind(bindKeys.KEY_2, false, function()
         return;
     if(chat)
         return;
+    
+    if(memObj != null)
+    {
+        if(memObj.handle != null)
+            mp.game.invoke('0x2087B43C7787E236', memObj.handle);
+        else
+            mp.game.invoke('0x2087B43C7787E236', memObj);
+        memObj = null;
+    }
+
     editorState = 1;
     editorDragMode = false;
 
@@ -911,6 +968,16 @@ mp.keys.bind(bindKeys.KEY_3, false, function()
         return;
     if(chat)
         return;
+
+    if(memObj != null)
+    {
+        if(memObj.handle != null)
+            mp.game.invoke('0x2087B43C7787E236', memObj.handle);
+        else
+            mp.game.invoke('0x2087B43C7787E236', memObj);
+        memObj = null;
+    }
+
     editorState = 2;
     editorDragMode = false;
 
@@ -1260,8 +1327,8 @@ mp.events.add("render", () =>
 
                     CreateAxisMarkerObjs();
                     CreateMovMarkerObjs();
-
                     editorState = 1;
+                    editorDragMode = false;
                 }
             }
             else
@@ -1277,6 +1344,7 @@ mp.events.add("render", () =>
                     CreateMovMarkerObjs();
 
                     editorState = 1;
+                    editorDragMode = false;
                 }
             }
         }
