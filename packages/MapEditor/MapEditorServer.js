@@ -56,7 +56,12 @@ function LoadMap(name)
                 dimension: -1
             });
             obj.setVariable("cmap_coll", dictData[i].col);
+            obj.setVariable("cmap_frz", dictData[i].freeze);
             mp.players.call("MapEditor_SetColl", [obj.id, dictData[i].col]);
+            if(dictData[i].freeze == null)
+                mp.players.call("MapEditor_SetFreeze", [obj.id, dictData[i].freeze]);
+            else
+                mp.players.call("MapEditor_SetFreeze", [obj.id, true]);
             loadedObjs.push(obj);
         }
         spawnedObjs.set(name, loadedObjs);
@@ -88,6 +93,10 @@ function LoadMap(name)
                         dimension: -1
                     });
                     mp.players.call("MapEditor_SetColl", [obj.id, dictData[i].col]);
+                    if(dictData[i].freeze == null)
+                        mp.players.call("MapEditor_SetFreeze", [obj.id, dictData[i].freeze]);
+                    else
+                        mp.players.call("MapEditor_SetFreeze", [obj.id, true]);
                     loadedObjs.push(obj);
                 }
                 spawnedObjs.set(name, loadedObjs);

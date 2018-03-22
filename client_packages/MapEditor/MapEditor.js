@@ -53,6 +53,9 @@ mp.events.add("MapEditor_EditMap", (data) =>
         obj.setCollision(true, false);
         obj.setRotation(objs[i].rx, objs[i].ry, objs[i].rz, 2, true);
         obj.cmapcoll = objs[i].col;
+        obj.cmapfreeze = objs[i].freeze;
+        if(obj.cmapfreeze == null)
+            obj.cmapfreeze = true;
         editorObjects.push(obj);
     }
 });
@@ -65,6 +68,17 @@ mp.events.add("MapEditor_SetColl", (entityID, coll) =>
     {
         entity.setCollision(!!coll, false);
         entity.cmapcoll = !!coll;
+        entity.setLodDist(LODDist);
+    }
+});
+
+mp.events.add("MapEditor_SetFreeze", (entityID, frz) =>
+{
+    let entity = mp.objects.ad(entityID);
+    if(entity != null)
+    {
+        entity.freezePosition(!!frz);
+        entity.cmapfreeze = !!frz;
         entity.setLodDist(LODDist);
     }
 });
@@ -143,6 +157,7 @@ let LODDist = 65535; //65535 = max
 let ToggleArrowKeyMovement = true;
 let AxisMem = 0;
 let editorFocusObjectCollision = true;
+let editorFocusObjectFreeze = true;
 let editorDragMode = false;
 
 let sc = mp.game.graphics.requestScaleformMovie("instructional_buttons");
@@ -531,6 +546,7 @@ function CreateFocusObject(hash = null)
         
         editorFocusObject = mp.objects.new(mp.game.joaat(objData[IndexMem]), mp.players.local.position, new mp.Vector3(), 255, 0);
         editorFocusObject.cmapcoll = true;
+        editorFocusObject.cmapfreeze = true;
         editorFocusObject.setLodDist(LODDist);
         editorFocusObject.freezePosition(true);
         editorFocusObject.setCollision(false, false);
@@ -548,6 +564,7 @@ function CreateFocusObject(hash = null)
             }
             editorFocusObject = mp.objects.new(hash, mp.players.local.position, new mp.Vector3(), 255, 0);
             editorFocusObject.cmapcoll = true;
+            editorFocusObject.cmapfreeze = true;
             editorFocusObject.setLodDist(LODDist);
             editorFocusObject.freezePosition(true);
             editorFocusObject.setCollision(false, false);
@@ -618,7 +635,8 @@ function StartMapEditor()
                 let pos = editorObjects[i].getCoords(true);
                 let rot = editorObjects[i].getRotation(2);
                 let coll = editorObjects[i].cmapcoll;
-                mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll});
+                let frz = editorFocusObject[i].cmapfreeze;
+                mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll, freeze: !!frz});
             }
         }
         mp.events.callRemote("MapEditor_Save", "autosave", JSON.stringify(mapData, null, " ") + "");
@@ -731,6 +749,7 @@ mp.events.add("playerCommand", (command) =>
                     let pos = editorObjects[i].getCoords(true);
                     let rot = editorObjects[i].getRotation(2);
                     let coll = editorObjects[i].cmapcoll;
+                    let frz = editorObjects[i].cmapfreeze;
                     mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll});
                 }
             }
@@ -1011,10 +1030,12 @@ mp.keys.bind(bindKeys.KEY_ENTER, false, function()
     mp.game.invoke(Natives.RESET_ENTITY_ALPHA, editorFocusObject.handle);
     editorFocusObject.setCollision(true, false);
     editorFocusObject.cmapcoll = editorFocusObjectCollision;
+    editorFocusObject.cmapfreeze = editorFocusObjectFreeze;
     let pos = editorFocusObject.getCoords(true);
     let rot = editorFocusObject.getRotation(2);
     editorObjects.push(editorFocusObject);
     editorFocusObjectCollision = true;
+    editorFocusObjectFreeze = true;
 
     while(!mp.game.streaming.isModelInCdimage(mp.game.joaat(objData[IndexMem])) || !mp.game.streaming.isModelValid(mp.game.joaat(objData[IndexMem])))
 	{
@@ -1099,6 +1120,19 @@ mp.keys.bind(bindKeys.KEY_C, false, function()
     if(ObjectNotNull(editorFocusObject))
     {
         editorFocusObject.cmapcoll = !!editorFocusObjectCollision;
+    }
+});
+
+mp.keys.bind(bindKeys.KEY_F, false, function()
+{
+    if(!editorStart)
+        return;
+    if(chat)
+        return;
+    editorFocusObjectFreeze = !editorFocusObjectFreeze;
+    if(ObjectNotNull(editorFocusObject))
+    {
+        editorFocusObject.cmapfreeze = !!editorFocusObjectFreeze;
     }
 });
 
@@ -1363,6 +1397,7 @@ mp.events.add("render", () =>
             mp.game.ui.addTextComponentSubstringPlayerName("Index: " + IndexMem + " -> " + objData[IndexMem]);
             mp.game.ui.drawSubtitleTimed(1, true);
             let colvar = editorFocusObject.cmapcoll;
+            let frzvar = editorFocusObject.cmapfreeze;
             AddInstructionalStart();
             AddInstructionalButtonCustom("Exit Editor", "t_F2");
             AddInstructionalButtonCustom("Selector Mode", "t_1");
@@ -1378,6 +1413,17 @@ mp.events.add("render", () =>
             else
             {
                 AddInstructionalButtonCustom("Collision: ON", "t_C");
+            }
+            if(frzvar != null)
+            {
+                if(frzvar)
+                    AddInstructionalButtonCustom("Frozen: ON", "t_F");
+                else
+                    AddInstructionalButtonCustom("Frozen: OFF", "t_F");
+            }
+            else
+            {
+                AddInstructionalButtonCustom("Frozen: ON", "t_F");
             }
             AddInstructionalButton("Auto Adjust", 101);
             AddInstructionalButton("Place Object", 100);
@@ -1398,10 +1444,12 @@ mp.events.add("render", () =>
                     mp.game.invoke(Natives.RESET_ENTITY_ALPHA, editorFocusObject.handle);
                     editorFocusObject.setCollision(true, false);
                     editorFocusObject.cmapcoll = editorFocusObjectCollision;
+                    editorFocusObject.cmapfreeze = editorFocusObjectFreeze;
                     let pos = editorFocusObject.getCoords(true);
                     let rot = editorFocusObject.getRotation(2);
                     editorObjects.push(editorFocusObject);
                     editorFocusObjectCollision = true;
+                    editorFocusObjectFreeze = true;
                     editorFocusObject = null;
                     CreateFocusObject();
                     AxisMem = 0;
@@ -1471,6 +1519,7 @@ mp.events.add("render", () =>
         else
         {
             let colvar = editorFocusObject.cmapcoll;
+            let frzvar = editorFocusObject.cmapfreeze;
             AddInstructionalStart();
             AddInstructionalButtonCustom("Exit Editor", "t_F2");
             AddInstructionalButtonCustom("Placement Mode", "t_2");
@@ -1485,6 +1534,17 @@ mp.events.add("render", () =>
             else
             {
                 AddInstructionalButtonCustom("Collision: ON", "t_C");
+            }
+            if(frzvar != null)
+            {
+                if(frzvar)
+                    AddInstructionalButtonCustom("Frozen: ON", "t_F");
+                else
+                    AddInstructionalButtonCustom("Frozen: OFF", "t_F");
+            }
+            else
+            {
+                AddInstructionalButtonCustom("Frozen: ON", "t_F");
             }
             if(ToggleArrowKeyMovement)
             {
