@@ -19,6 +19,12 @@ mp.events.add("entityStreamIn", (entity) =>
         {
             entity.setCollision(collision, false);
         }
+
+        let freeze = entity.getVariable("cmap_freeze");
+        if(freeze != null)
+        {
+            entity.freezePosition(freeze);
+        }
     }
 });
 
@@ -74,7 +80,7 @@ mp.events.add("MapEditor_SetColl", (entityID, coll) =>
 
 mp.events.add("MapEditor_SetFreeze", (entityID, frz) =>
 {
-    let entity = mp.objects.ad(entityID);
+    let entity = mp.objects.at(entityID);
     if(entity != null)
     {
         entity.freezePosition(!!frz);
@@ -119,7 +125,8 @@ const bindKeys = {
     KEY_DELETE: 0x2E,
     KEY_C: 0x43,
     KEY_UNDO: 0x5A,
-    KEY_REDO: 0x59
+    KEY_REDO: 0x59,
+    KEY_F: 0x46,
 };
 
 let controlModifier = false;
@@ -635,7 +642,7 @@ function StartMapEditor()
                 let pos = editorObjects[i].getCoords(true);
                 let rot = editorObjects[i].getRotation(2);
                 let coll = editorObjects[i].cmapcoll;
-                let frz = editorFocusObject[i].cmapfreeze;
+                let frz = editorObjects[i].cmapfreeze;
                 mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll, freeze: !!frz});
             }
         }
@@ -750,10 +757,10 @@ mp.events.add("playerCommand", (command) =>
                     let rot = editorObjects[i].getRotation(2);
                     let coll = editorObjects[i].cmapcoll;
                     let frz = editorObjects[i].cmapfreeze;
-                    mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll});
+                    mapData.push({model : editorObjects[i].getModel(), x: pos.x, y: pos.y, z: pos.z, rx: rot.x, ry: rot.y, rz: rot.z, col: !!coll, freeze: !!frz});
                 }
             }
-
+            mp.gui.chat.push("save LEN: " + editorObjects.length);
             mp.events.callRemote("MapEditor_Save", args[0], JSON.stringify(mapData, null, " ") + "");
             mp.gui.chat.push("Map saved!");
         }
@@ -1024,30 +1031,51 @@ mp.keys.bind(bindKeys.KEY_ENTER, false, function()
     if(editorState === 0)
         return;
 
-    if(editorFocusObject === null)
+    if(editorFocusObject == null)
         return;
 
-    mp.game.invoke(Natives.RESET_ENTITY_ALPHA, editorFocusObject.handle);
-    editorFocusObject.setCollision(true, false);
-    editorFocusObject.cmapcoll = editorFocusObjectCollision;
-    editorFocusObject.cmapfreeze = editorFocusObjectFreeze;
-    let pos = editorFocusObject.getCoords(true);
-    let rot = editorFocusObject.getRotation(2);
-    editorObjects.push(editorFocusObject);
-    editorFocusObjectCollision = true;
-    editorFocusObjectFreeze = true;
-
-    while(!mp.game.streaming.isModelInCdimage(mp.game.joaat(objData[IndexMem])) || !mp.game.streaming.isModelValid(mp.game.joaat(objData[IndexMem])))
-	{
-		IndexMem++;
-		if(IndexMem >= objData.length)
-			IndexMem = 0;
+    if(IsObjectSpawned(editorFocusObject))
+    {
+        mp.game.invoke(Natives.RESET_ENTITY_ALPHA, editorFocusObject.handle);
+        editorFocusObject.setCollision(true, false);
+        editorFocusObject.cmapcoll = editorFocusObjectCollision;
+        editorFocusObject.cmapfreeze = editorFocusObjectFreeze;
+        editorFocusObjectCollision = true;
+        editorFocusObjectFreeze = true;
+        while(!mp.game.streaming.isModelInCdimage(mp.game.joaat(objData[IndexMem])) || !mp.game.streaming.isModelValid(mp.game.joaat(objData[IndexMem])))
+        {
+            IndexMem++;
+            if(IndexMem >= objData.length)
+                IndexMem = 0;
+        }
+        
+        editorFocusObject = null;
+        //CreateFocusObject();
+        AxisMem = 0;
+        editorState = 2;
     }
-    
-    editorFocusObject = null;
-    //CreateFocusObject();
-    AxisMem = 0;
-    editorState = 2;
+    else
+    {
+        mp.game.invoke(Natives.RESET_ENTITY_ALPHA, editorFocusObject.handle);
+        editorFocusObject.setCollision(true, false);
+        editorFocusObject.cmapcoll = editorFocusObjectCollision;
+        editorFocusObject.cmapfreeze = editorFocusObjectFreeze;
+        editorObjects.push(editorFocusObject);
+        editorFocusObjectCollision = true;
+        editorFocusObjectFreeze = true;
+
+        while(!mp.game.streaming.isModelInCdimage(mp.game.joaat(objData[IndexMem])) || !mp.game.streaming.isModelValid(mp.game.joaat(objData[IndexMem])))
+        {
+            IndexMem++;
+            if(IndexMem >= objData.length)
+                IndexMem = 0;
+        }
+        
+        editorFocusObject = null;
+        //CreateFocusObject();
+        AxisMem = 0;
+        editorState = 2;
+    }
 });
 
 //----------chat----
@@ -1286,9 +1314,9 @@ mp.events.add("render", () =>
         if(memObj != null)
         {
             if(memObj.model != null)
-                {
-                    mp.game.ui.addTextComponentSubstringPlayerName("[Editor Object]: " + memObj.model);
-                }
+            {
+                mp.game.ui.addTextComponentSubstringPlayerName("[Editor Object]: " + memObj.model);
+            }
             else
             {
                 mp.game.ui.addTextComponentSubstringPlayerName("[Invalid Object]: " + mp.game.invoke(Natives.GET_ENTITY_MODEL, memObj));
